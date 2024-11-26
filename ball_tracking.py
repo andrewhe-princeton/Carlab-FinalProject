@@ -11,11 +11,16 @@ import cv2
 import imutils
 import time
 
-from picamera2 import Picamera2
 
+from picamera2 import Picamera2
+import libcamera
+
+from adafruit_servokit import ServoKit
+kit = ServoKit(channels = 16)
 
 picamera = Picamera2()
-picamera.configure(picamera.create_preview_configuration(main={"format": 'BGR888', "size": (1280, 960)}))
+picamera.configure(picamera.create_preview_configuration(main={"format": 'BGR888', "size": (1280, 960)},
+														 transform=libcamera.Transform(hflip=1, vflip=1)))
 picamera.start()
 
 
@@ -34,6 +39,12 @@ args = vars(ap.parse_args())
 greenLower = (29, 86, 6)
 greenUpper = (64, 255, 255)
 pts = deque(maxlen=args["buffer"])
+
+# servo starting positions
+A0 = 90
+A1 = 100
+kit.servo[0].angle = A0
+kit.servo[1].angle = A1
 
 # if a video path was not supplied, grab the reference
 # to the webcam
@@ -92,6 +103,29 @@ while True:
 
 		# only proceed if the radius meets a minimum size
 		if radius > 10:
+			
+			#Control Horizontal Servo 
+			if x > 330 or x < 270:
+				A0 = int(((x-300)/(2*9.6463))+A0)
+				if A0 > 180:
+					A0 = 180
+				elif A0 < 0:
+					A0 = 0
+
+			#Control Vertical Servo
+			if y > 245 or y < 205:
+				A1 = int(((x-225)/(2*9.2213))+A1)
+				if A1 > 130:
+					A1 = 100
+				elif A1 < 0:
+					A1 = 0
+			
+			kit.servo[0].angle = A0
+			kit.servo[1].angle = A1
+			
+			
+			
+			
 			# draw the circle and centroid on the frame,
 			# then update the list of tracked points
 			cv2.circle(frame, (int(x), int(y)), int(radius),
